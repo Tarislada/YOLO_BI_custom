@@ -1,0 +1,13 @@
+.qodo
+# Ignore everything by default
+*
+
+# Allow directories so Git can traverse them
+!*/
+
+# Ensure .gitignore itself is tracked
+!.gitignore
+
+# Whitelist Python files in the root and in all subdirectories
+!*.py
+!**/*.py
