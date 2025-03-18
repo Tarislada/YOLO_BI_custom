@@ -1,6 +1,8 @@
 import os
 import shutil
 import random
+import glob
+
 # from PIL import Image
 
 def rename_with_prefix(folder_path: str, prefix: str) -> None:
@@ -156,6 +158,72 @@ def train_val_split(root_dir: str, val_ratio: float = 0.2, seed: int = 42) -> No
 #         img = img.convert("RGB")
 #         img.save(png_path, "PNG")
 
+def fix_yolo_annotations(input_dir, output_dir=None):
+    """
+    Fix YOLO annotation files where center coordinates were incorrectly calculated
+    by subtracting half width/height from the center coordinates.
+    
+    Args:
+        input_dir: Directory containing the erroneous YOLO annotation files
+        output_dir: Directory to save corrected files (if None, will overwrite original files)
+    """
+    if output_dir is None:
+        output_dir = input_dir
+    else:
+        os.makedirs(output_dir, exist_ok=True)
+    
+    # Find all .txt annotation files
+    annotation_files = glob.glob(os.path.join(input_dir, "*.txt"))
+    print(f"Found {len(annotation_files)} annotation files to fix")
+    
+    for file_path in annotation_files:
+        filename = os.path.basename(file_path)
+        output_path = os.path.join(output_dir, filename)
+        
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+        
+        fixed_lines = []
+        for line in lines:
+            parts = line.strip().split()
+            if len(parts) >= 5:  # Ensure we have at least class_id + bbox
+                class_id = parts[0]
+                
+                # Parse bbox values
+                x_center = float(parts[1])
+                y_center = float(parts[2])
+                width = float(parts[3])
+                height = float(parts[4])
+                
+                # Fix center coordinates by subtracting half width/height
+                fixed_x_center = x_center - width/2
+                fixed_y_center = y_center - height/2
+                
+                # Ensure coordinates stay within 0-1 range
+                fixed_x_center = max(0, min(1, fixed_x_center))
+                fixed_y_center = max(0, min(1, fixed_y_center))
+                
+                # Rebuild the line with fixed coordinates
+                fixed_parts = [class_id, 
+                              f"{fixed_x_center:.6f}", 
+                              f"{fixed_y_center:.6f}", 
+                              f"{width:.6f}", 
+                              f"{height:.6f}"]
+                
+                # Add keypoints if they exist (parts 5 and beyond)
+                if len(parts) > 5:
+                    fixed_parts.extend(parts[5:])
+                
+                fixed_lines.append(" ".join(fixed_parts) + "\n")
+        
+        # Write the fixed annotations
+        with open(output_path, 'w') as f:
+            f.writelines(fixed_lines)
+        
+        print(f"Fixed annotations in {filename}")
+    
+    print(f"Successfully fixed {len(annotation_files)} annotation files")
+
 
 
 if __name__ == "__main__":
@@ -169,7 +237,12 @@ if __name__ == "__main__":
     # 2) List all images in a txt file
     output_txt = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/YOLO_format/Bot_IR_Hunting/KH_bot_IR_v4/val.txt"
     base_path_for_list = "./images/train"
-    list_images_in_txt(folder_path, output_txt, base_path_for_list)
+    # list_images_in_txt(folder_path, output_txt, base_path_for_list)
     
     # root_dir = "/path/to/dataset"
     # train_val_split(root_dir, val_ratio=0.2, seed=42)
+
+    input_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/YOLO_format/Bot_IR_Hunting/tmp_fix/val"
+    output_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/YOLO_format/Bot_IR_Hunting/tmp_fix/fixed_val"  # Optional, remove to overwrite originals
+    
+    fix_yolo_annotations(input_dir, output_dir)
