@@ -889,8 +889,11 @@ class AnnotationTool(QMainWindow):
                                 if annotation.get('modified'):  # Only save modified annotations
                                     bbox = annotation['bbox']
                     
-                                    x_center = bbox[0] + bbox[2]/2
-                                    y_center = bbox[1] + bbox[3]/2
+                                    # x_center = bbox[0] + bbox[2]/2
+                                    # y_center = bbox[1] + bbox[3]/2
+                                    # TODO: check if yolo annotation error is fixed. 
+                                    x_center = bbox[0]
+                                    y_center = bbox[1]
                                     w,h = bbox[2], bbox[3]
                 
                                     # Start with class ID and bounding box
