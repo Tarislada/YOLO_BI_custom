@@ -228,21 +228,24 @@ def fix_yolo_annotations(input_dir, output_dir=None):
 
 if __name__ == "__main__":
     # Example usage:
-    folder_path = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/YOLO_format/Bot_IR_Hunting/KH_bot_IR_v4/images/val"
+    folder_path = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/Cricket_v3/images/train"
 
-    # 1) Rename images by adding a prefix
-    prefix = "KH_set5_"
+    # # 1) Rename images by adding a prefix
+    # prefix = "Corner_"
     # rename_with_prefix(folder_path, prefix)
 
     # 2) List all images in a txt file
-    output_txt = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/YOLO_format/Bot_IR_Hunting/KH_bot_IR_v4/val.txt"
-    base_path_for_list = "./images/train"
+    # output_txt = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/Cricket_v3/train.txt"
+    # base_path_for_list = "./images/train"
     # list_images_in_txt(folder_path, output_txt, base_path_for_list)
     
-    # root_dir = "/path/to/dataset"
+    # 3) Train/val split on manual_adjustment.py
+    # root_dir = "/mnt/disk3/Cricket_hunt/additional_annots"
     # train_val_split(root_dir, val_ratio=0.2, seed=42)
 
-    input_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/YOLO_format/Bot_IR_Hunting/tmp_fix/val"
-    output_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/YOLO_format/Bot_IR_Hunting/tmp_fix/fixed_val"  # Optional, remove to overwrite originals
+    # 4) Fixing YOLO box annotation from manual_adjustment.py
+    input_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/Cricket_v3/labels/tmp_train/Corner_frame_020141.txt"
+    output_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/Cricket_v3/labels/fixed_train/Corner_frame_020141.txt"  # Optional, remove to overwrite originals
     
+    #TODO: Fixed annots have less # of floating points than original annots. need a mode that would turn keypoint annots into box only.
     fix_yolo_annotations(input_dir, output_dir)

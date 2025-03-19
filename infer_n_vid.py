@@ -152,8 +152,8 @@ class VideoProcessor:
             # Perform prediction only once and store the results in an instance variable
             # Redirect standard output
             # sys.stdout = open(os.devnull, 'w')
-            self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=1, imgsz=480, retina_masks=True) # for Custom videos
-            # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=1, imgsz=1920, augment=True, retina_masks=True) # for cricket detection
+            # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=1, imgsz=1920, retina_masks=True) # for Custom videos
+            self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=1, imgsz=1920, augment=True, retina_masks=True) # for cricket detection
             # self.results = self.model.track(self.video_path,  stream=True, device="cuda:0", persist=True, max_det=5,conf=0.2,retina_masks=True,imgsz=1024) # For AVATAR videos
             # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, iou=0.6, conf=0.2,retina_masks=True,imgsz=2048) # For AVATAR social
             # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, iou=0.6, conf=0.2,retina_masks=True,imgsz=1280) # For MONKEY videos
@@ -301,14 +301,14 @@ class VideoProcessor:
 # Usage 
 if __name__ == "__main__":
     # model_path = '/home/tarislada/YOLOprojects/YOLO_custom/Models/KH_binocular/KH_NoseNtail_sv1_2b.pt'
-    model_path = '/home/tarislada/YOLOprojects/runs/pose/train88/weights/best.pt' # testrun on sv3 based additional trained model.
+    # model_path = '/home/tarislada/YOLOprojects/YOLO_custom/Models/KH_bot_ir/KH_bot_sv3_8/weights/best.pt' # testrun on sv3 based additional trained model.
     # model_path = 'YOLO_custom/Models/YW/YW_v01.pt'
     # model_path = 'YOLO_custom/Models/KH_binocular/KH_noseperfect_s_v1.pt'
     # model_path = 'YOLO_custom/Models/Real_3D_AVATAR/Med_v11__hhres_bot_addv02_01.pt'
     # model_path = 'YOLO_custom/Models/Real_3D_AVATAR/Med_v11__hhres_bot_addv02_all1.pt'
     # model_path = 'YOLO_custom/Models/KH_bot_ir/KH_bot_sv3_7.pt'
     # model_path = 'runs/detect/train16/weights/best.pt'
-    # model_path = 'YOLO_custom/Models/Cricket_detection/Cricket_v11s_04.pt'
+    model_path = 'Models/Cricket_detection/Cricket_v2s.pt'
     # model_path = 'YOLO_custom/Models/Monkey_data/train23/weights/best.pt'
     # fps = 60.0
     fps = 30.0
@@ -323,7 +323,7 @@ if __name__ == "__main__":
     # # video_path = 'YOLO_custom/Video_KH/Photometory_CB/batch2/MVI_1674.mp4'
     # video_path = '/home/tarislada/Documents/Extra_python_projects/SKH FP/video_file/m17_t1.mp4'
     # video_path = '/mnt/disk3/Cricket_hunt/raw/m20_t2.MP4'
-    # video_path = '/media/tarislada/SC_PAG_2_SKH/SC_PAG/fiberphotometry/doric/250108_video_set5_m24_2_m31/m24_2_t7.MP4'
+    video_path = '/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_binocular_set6/representative.mp4'
     
     # image_folder = 'YOLO_custom/KH/KH_binocular_set5/images/m24_2_t7_KH_NoseNtail_sv1_2b' # Provide a path if you want to keep the frame images
     
@@ -339,6 +339,7 @@ if __name__ == "__main__":
     # output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/m20_t2_natrez_v11s04_nat_aug.mp4'
     # output_video_name = 'YOLO_custom/Result_vid/m24_2_t7_KH_NoseNtail_sv1_2b.mp4'
     # output_video_name = 'YOLO_custom/Result_vid/m17_t1_KH_NoseNtail_sv1_2b.mp4'
+    output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/KH_set6_m33_t2_crickettest_v11s04.mp4'
     
     # csv_file_path = '/home/tarislada/YOLOprojects/YOLO_custom/csv/MVI_0624_KH_bot_sv3_1b_original.csv'  # Provide a path if you want to save results to CSV
     # csv_file_path = '/home/tarislada/Documents/Extra_python_projects/SKH FP/m18_t7_v3_raw.csv'
@@ -346,45 +347,45 @@ if __name__ == "__main__":
     # csv_file_path = 'YOLO_custom/KH/KH_binocular_set5/m24_2_t7_KH_NoseNtail_sv1_2b.csv'
        
     # processor = VideoProcessor(model_path=model_path, video_path=video_path, output_video_name=output_video_name, fps=fps, csv_file_path=csv_file_path)
-    # processor = VideoProcessor(model_path=model_path, video_path=video_path, output_video_name=output_video_name, fps=fps)
-    # processor.process_video()
+    processor = VideoProcessor(model_path=model_path, video_path=video_path, output_video_name=output_video_name, fps=fps)
+    processor.process_video()
     # processor = VideoProcessor(model_path=model_path, video_path=video_path, image_folder=image_folder, fps=fps, csv_file_path=csv_file_path)
     # processor.process_video()
     # processor.process_image()
     
     # Multiple file level usage
     # video_directory = '/home/tarislada/Documents/Extra_python_projects/SKH FP/video_file'
-    video_directory = '/media/tarislada/SC_PAG_2_SKH/SC_PAG/fiberphotometry/doric/250108_video_set5_m24_2_m31'
-    # video_directory = 'YOLO_custom/YN/v2'
+    # video_directory = '/mnt/disk3/Video_KH/250108_video_set5_m24_2_m31'
+    # # video_directory = 'YOLO_custom/YN/v2'
     
-    # # List all .mp4 files in the specified directory
-    video_extensions = ['*.mp4', '*.MP4', '*.avi']
-    video_paths = []
-    for extension in video_extensions:
-        video_paths.extend(glob.glob(os.path.join(video_directory, extension)))
+    # # # List all .mp4 files in the specified directory
+    # video_extensions = ['*.mp4', '*.MP4', '*.avi']
+    # video_paths = []
+    # for extension in video_extensions:
+    #     video_paths.extend(glob.glob(os.path.join(video_directory, extension)))
 
-    # # video_paths = glob.glob(os.path.join(video_directory, '*.mp4'))
+    # # # video_paths = glob.glob(os.path.join(video_directory, '*.mp4'))
 
-    # Define the model path and other parameters
+    # # Define the model path and other parameters
 
-    # Iterate over all video files and process them
-    for video_path in video_paths:
-        if not os.path.exists(video_path):
-            print(f"Video file not found: {video_path}")
-            continue
+    # # Iterate over all video files and process them
+    # for video_path in video_paths:
+    #     if not os.path.exists(video_path):
+    #         print(f"Video file not found: {video_path}")
+    #         continue
         
-        # Extract the video file name (without extension) to use it as a base name for output files
-        base_name = os.path.basename(video_path)
-        name_without_extension = os.path.splitext(base_name)[0]
+    #     # Extract the video file name (without extension) to use it as a base name for output files
+    #     base_name = os.path.basename(video_path)
+    #     name_without_extension = os.path.splitext(base_name)[0]
         
-        # Define unique output paths for each video
-        # output_video_name = f"/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/{name_without_extension}_output.mp4"
-        output_video_name = f"YOLO_custom/KH/KH_binocular_set5/{name_without_extension}_output.mp4"
-        image_folder = f"YOLO_custom/KH/KH_binocular_set5/{name_without_extension}"
-        csv_file_path = f"YOLO_custom/KH/KH_binocular_set5/{name_without_extension}.csv"
-        # csv_file_path = f'YOLO_custom/YN/csv/{name_without_extension}.csv'
+    #     # Define unique output paths for each video
+    #     # output_video_name = f"/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/{name_without_extension}_output.mp4"
+    #     output_video_name = f"YOLO_custom/KH/KH_binocular_set5/{name_without_extension}_output.mp4"
+    #     image_folder = f"YOLO_custom/KH/KH_binocular_set5/{name_without_extension}"
+    #     csv_file_path = f"YOLO_custom/KH/KH_binocular_set5/{name_without_extension}.csv"
+    #     # csv_file_path = f'YOLO_custom/YN/csv/{name_without_extension}.csv'
         
-        # Create the processor object and start processing the video
-        # processor = VideoProcessor(model_path=model_path, video_path=video_path, csv_file_path=csv_file_path, output_video_name = output_video_name, fps=fps)
-        processor = VideoProcessor(model_path=model_path, video_path=video_path, csv_file_path=csv_file_path, fps=fps, output_video_name=output_video_name)
-        processor.process_video()
+    #     # Create the processor object and start processing the video
+    #     # processor = VideoProcessor(model_path=model_path, video_path=video_path, csv_file_path=csv_file_path, output_video_name = output_video_name, fps=fps)
+    #     processor = VideoProcessor(model_path=model_path, video_path=video_path, csv_file_path=csv_file_path, fps=fps, output_video_name=output_video_name)
+    #     processor.process_video()

@@ -139,14 +139,15 @@ if __name__ == "__main__":
     # frames_output_dir = '/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Walltask'
     stride_value = 15
     
-    extract_frames_from_directory(
-        input_videos_dir, 
-        frames_output_dir, 
-        stride=stride_value, 
-        prefix="frame"
-    )
+    # extract_frames_from_directory(
+    #     input_videos_dir, 
+    #     frames_output_dir, 
+    #     stride=stride_value, 
+    #     prefix="frame"
+    # )
     
     # 2) Combine all images in 'some_image_dir' into a video
     # images_dir = '/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Walltask/represetative'
-    # output_video = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Walltask/represetative.mp4"
-    # images_to_video(images_dir, output_video, fps=30)
+    images_dir = '/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_binocular_set6/extracted_frames/m33_t2'
+    output_video = "/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_binocular_set6/representative.mp4"
+    images_to_video(images_dir, output_video, fps=30)
