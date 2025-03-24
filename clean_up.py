@@ -224,28 +224,109 @@ def fix_yolo_annotations(input_dir, output_dir=None):
     
     print(f"Successfully fixed {len(annotation_files)} annotation files")
 
+def DG_BOX_separate_files(directory):
+    """
+    Separates .txt files and image files in the given directory.
+    Creates 'labels' and 'images' subdirectories and moves files accordingly.
+    
+    Parameters:
+        directory (str): The path to the directory containing the mixed files.
+    """
+    # Define subdirectories
+    labels_dir = os.path.join(directory, 'labels')
+    images_dir = os.path.join(directory, 'images')
+    
+    # Create subdirectories if they don't exist
+    os.makedirs(labels_dir, exist_ok=True)
+    os.makedirs(images_dir, exist_ok=True)
+    
+    # Define image file extensions
+    image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'}
+    
+    # Get all files in the directory
+    files = glob.glob(os.path.join(directory, '*'))
+    
+    for file in files:
+        if os.path.isfile(file):  # Ensure it's a file
+            ext = os.path.splitext(file)[1].lower()  # Get file extension
+            
+            if ext == '.txt':
+                shutil.move(file, os.path.join(labels_dir, os.path.basename(file)))
+            elif ext in image_extensions:
+                shutil.move(file, os.path.join(images_dir, os.path.basename(file)))
+    
+    print(f"Separation completed. Check '{labels_dir}' and '{images_dir}'.")
+
+def box_clearobj(folder_path: str, class_threshold: int = 6) -> None:
+    """
+    Scans all .txt files in `folder_path` (YOLO label files),
+    and removes any annotation lines where the class number > `class_threshold`.
+    
+    Example:
+        If class_threshold = 6, any annotation line with class 7, 8, 9... is removed.
+        
+    Each label line is assumed to have the format:
+        class x_center y_center width height
+    """
+    # Loop over each file in the folder
+    for filename in os.listdir(folder_path):
+        if not filename.endswith(".txt"):
+            continue
+        
+        file_path = os.path.join(folder_path, filename)
+        
+        # Read all lines from the label file
+        with open(file_path, "r") as f:
+            lines = f.readlines()
+        
+        # Filter out lines where the class number is > class_threshold
+        filtered_lines = []
+        for line in lines:
+            parts = line.strip().split()
+            if not parts:
+                continue
+            
+            # The first element should be the class index
+            class_idx_str = parts[0]
+            try:
+                class_idx = int(class_idx_str)
+            except ValueError:
+                # If it's not an integer, skip or handle differently if you like
+                continue
+            
+            if class_idx <= class_threshold:
+                filtered_lines.append(line)
+        
+        # Overwrite the file with the filtered lines
+        with open(file_path, "w") as f:
+            for line in filtered_lines:
+                f.write(line)
 
 
 if __name__ == "__main__":
     # Example usage:
-    folder_path = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/Cricket_v3/images/train"
+    folder_path = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/images/val"
 
-    # # 1) Rename images by adding a prefix
-    # prefix = "Corner_"
+    # 1) Rename images by adding a prefix
+    # prefix = "Generic_"
     # rename_with_prefix(folder_path, prefix)
 
     # 2) List all images in a txt file
-    # output_txt = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/Cricket_v3/train.txt"
-    # base_path_for_list = "./images/train"
+    # output_txt = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/val.txt"
+    # base_path_for_list = "./images/val"
     # list_images_in_txt(folder_path, output_txt, base_path_for_list)
     
     # 3) Train/val split on manual_adjustment.py
-    # root_dir = "/mnt/disk3/Cricket_hunt/additional_annots"
+    # root_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img"
     # train_val_split(root_dir, val_ratio=0.2, seed=42)
 
     # 4) Fixing YOLO box annotation from manual_adjustment.py
-    input_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/Cricket_v3/labels/tmp_train/Corner_frame_020141.txt"
-    output_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/Cricket_v3/labels/fixed_train/Corner_frame_020141.txt"  # Optional, remove to overwrite originals
+    # input_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/Cricket_v3/labels/tmp_train/Corner_frame_020141.txt"
+    # output_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/Cricket_v3/labels/fixed_train/Corner_frame_020141.txt"  # Optional, remove to overwrite originals
     
     #TODO: Fixed annots have less # of floating points than original annots. need a mode that would turn keypoint annots into box only.
-    fix_yolo_annotations(input_dir, output_dir)
+    # fix_yolo_annotations(input_dir, output_dir)
+
+    # DG_BOX_separate_files('/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_box_img/img/Generic')
+    # box_clearobj('/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/train', class_threshold=6)
+    box_clearobj('/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/val', class_threshold=6)
