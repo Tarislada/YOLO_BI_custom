@@ -453,3 +453,5 @@ if __name__ == "__main__":
     )
     
     checker.run_checks()
+    # Example usage in terminal:
+    # python yolo_pose_checker.py --images /path/to/images --labels /path/to/labels --keypoints 17 --visualize /path/to/output/visualizations
