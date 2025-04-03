@@ -153,12 +153,12 @@ class VideoProcessor:
             # Redirect standard output
             # sys.stdout = open(os.devnull, 'w')
             # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=1, imgsz=1920, retina_masks=True) # for Custom videos
-            self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=1, imgsz=1920, augment=True, retina_masks=True) # for cricket detection
+            # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=1, imgsz=1920, augment=True, retina_masks=True) # for cricket detection
             # self.results = self.model.track(self.video_path,  stream=True, device="cuda:0", persist=True, max_det=5,conf=0.2,retina_masks=True,imgsz=1024) # For AVATAR videos
             # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, iou=0.6, conf=0.2,retina_masks=True,imgsz=2048) # For AVATAR social
             # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, iou=0.6, conf=0.2,retina_masks=True,imgsz=1280) # For MONKEY videos
-            # sys.stdout = sys.__stdout__
-            
+            self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, imgsz=1920, retina_masks=True) # for AVATAR_Box
+            # sys.stdout = sys.AVATAR_Box
             self.tensors_list = []
             for i, result in enumerate(self.results):
                 self._process_result(result, i)
@@ -208,7 +208,8 @@ class VideoProcessor:
                 output_path = os.path.join(self.image_folder, f"inferred_{base_name}")
 
             # Extract inference result image (modify based on how your YOLO model returns results)
-                im = Image.fromarray(result[0].plot(kpt_radius=3)[...,::-1])
+                # im = Image.fromarray(result[0].plot(kpt_radius=3)[...,::-1]) # Pose model
+                im = Image.fromarray(result[0].plot(line_width=1,font_size=1)[...,::-1]) # AVATAR_Box
                 im.save(output_path)
 
                 # result[0].save(filename=output_path)  # Adjust this line according to how your model's results are structured
@@ -308,7 +309,9 @@ if __name__ == "__main__":
     # model_path = 'YOLO_custom/Models/Real_3D_AVATAR/Med_v11__hhres_bot_addv02_all1.pt'
     # model_path = 'YOLO_custom/Models/KH_bot_ir/KH_bot_sv3_7.pt'
     # model_path = 'runs/detect/train16/weights/best.pt'
-    model_path = 'Models/Cricket_detection/Cricket_v2s.pt'
+    # model_path = 'Models/Cricket_detection/Cricket_v2s.pt'
+    model_path = '/home/tarislada/YOLOprojects/YOLO_custom/Models/AVATAR_Box_m_v2_inter/weights/best.pt'
+    # model_path = '/home/tarislada/YOLOprojects/YOLO_custom/Models/AVATAR_Box_m/weights/best.pt'
     # model_path = 'YOLO_custom/Models/Monkey_data/train23/weights/best.pt'
     # fps = 60.0
     fps = 30.0
@@ -323,7 +326,8 @@ if __name__ == "__main__":
     # # video_path = 'YOLO_custom/Video_KH/Photometory_CB/batch2/MVI_1674.mp4'
     # video_path = '/home/tarislada/Documents/Extra_python_projects/SKH FP/video_file/m17_t1.mp4'
     # video_path = '/mnt/disk3/Cricket_hunt/raw/m20_t2.MP4'
-    video_path = '/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_binocular_set6/representative.mp4'
+    # video_path = '/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_binocular_set6/representative.mp4'
+    video_path = '/home/tarislada/YOLOprojects/YOLO_custom/411.mp4'
     
     # image_folder = 'YOLO_custom/KH/KH_binocular_set5/images/m24_2_t7_KH_NoseNtail_sv1_2b' # Provide a path if you want to keep the frame images
     
@@ -339,7 +343,8 @@ if __name__ == "__main__":
     # output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/m20_t2_natrez_v11s04_nat_aug.mp4'
     # output_video_name = 'YOLO_custom/Result_vid/m24_2_t7_KH_NoseNtail_sv1_2b.mp4'
     # output_video_name = 'YOLO_custom/Result_vid/m17_t1_KH_NoseNtail_sv1_2b.mp4'
-    output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/KH_set6_m33_t2_crickettest_v11s04.mp4'
+    # output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/KH_set6_m33_t2_crickettest_v11s04.mp4'
+    output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/411.mp4'
     
     # csv_file_path = '/home/tarislada/YOLOprojects/YOLO_custom/csv/MVI_0624_KH_bot_sv3_1b_original.csv'  # Provide a path if you want to save results to CSV
     # csv_file_path = '/home/tarislada/Documents/Extra_python_projects/SKH FP/m18_t7_v3_raw.csv'
@@ -354,8 +359,7 @@ if __name__ == "__main__":
     # processor.process_image()
     
     # Multiple file level usage
-    # video_directory = '/home/tarislada/Documents/Extra_python_projects/SKH FP/video_file'
-    # video_directory = '/mnt/disk3/Video_KH/250108_video_set5_m24_2_m31'
+    # video_directory = '/media/tarislada/SAMSUNG/Doric임시/854_0304/representative/raw_vid'
     # # video_directory = 'YOLO_custom/YN/v2'
     
     # # # List all .mp4 files in the specified directory
@@ -380,9 +384,9 @@ if __name__ == "__main__":
         
     #     # Define unique output paths for each video
     #     # output_video_name = f"/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/{name_without_extension}_output.mp4"
-    #     output_video_name = f"YOLO_custom/KH/KH_binocular_set5/{name_without_extension}_output.mp4"
-    #     image_folder = f"YOLO_custom/KH/KH_binocular_set5/{name_without_extension}"
-    #     csv_file_path = f"YOLO_custom/KH/KH_binocular_set5/{name_without_extension}.csv"
+    #     output_video_name = f"/media/tarislada/SAMSUNG/Doric임시/854_0304/representative/Cricket_extraction/{name_without_extension}_output.mp4"
+    #     # image_folder = f"/media/tarislada/SAMSUNG/Doric임시/854_0304/representative/pose_extraction/{name_without_extension}"
+    #     csv_file_path = f"/media/tarislada/SAMSUNG/Doric임시/854_0304/representative/Cricket_extraction/{name_without_extension}.csv"
     #     # csv_file_path = f'YOLO_custom/YN/csv/{name_without_extension}.csv'
         
     #     # Create the processor object and start processing the video
