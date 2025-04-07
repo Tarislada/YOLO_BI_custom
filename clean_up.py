@@ -302,19 +302,84 @@ def box_clearobj(folder_path: str, class_threshold: int = 6) -> None:
             for line in filtered_lines:
                 f.write(line)
 
+def insert_dummy_keypoint(folder_path: str, keypoint_position: int) -> None:
+    """
+    Inserts a dummy keypoint (0, 0, 0) at the specified position in all YOLO annotation files in the folder.
+    
+    This function helps make different keypoint annotation schemes compatible by adding a placeholder
+    keypoint at a specific position.
+    
+    Parameters:
+        folder_path (str): Directory containing YOLO annotation files (.txt)
+        keypoint_position (int): Position to insert the dummy keypoint (0-indexed within keypoints)
+                                For example, 0 would insert before the first keypoint,
+                                3 would insert before the 4th keypoint, etc.
+    """
+    # Loop over each file in the folder
+    modified_count = 0
+    
+    for filename in os.listdir(folder_path):
+        if not filename.endswith(".txt"):
+            continue
+        
+        file_path = os.path.join(folder_path, filename)
+        
+        # Read all lines from the annotation file
+        with open(file_path, "r") as f:
+            lines = f.readlines()
+        
+        modified_lines = []
+        for line in lines:
+            parts = line.strip().split()
+            if not parts or len(parts) < 5:  # Skip invalid lines
+                modified_lines.append(line)
+                continue
+            
+            # First 5 values are: class_id, x, y, w, h
+            bbox_parts = parts[:5]
+            
+            # All remaining values are keypoints in (x, y, visibility) triplets
+            keypoint_parts = parts[5:]
+            
+            # Calculate the index to insert the dummy keypoint (0, 0, 0)
+            # Each keypoint takes 3 values, so multiply position by 3
+            insertion_index = keypoint_position * 3
+            
+            # Don't insert if it would be beyond the available keypoints
+            if insertion_index <= len(keypoint_parts):
+                # Insert dummy keypoint (0, 0, 0)
+                keypoint_parts = (keypoint_parts[:insertion_index] + 
+                                 ["0", "0", "0"] + 
+                                 keypoint_parts[insertion_index:])
+                
+                # Combine everything back into a line
+                modified_line = " ".join(bbox_parts + keypoint_parts) + "\n"
+                modified_lines.append(modified_line)
+            else:
+                # If insertion point is beyond existing keypoints, leave as is
+                modified_lines.append(line)
+        
+        # Write the modified content back to the file
+        with open(file_path, "w") as f:
+            f.writelines(modified_lines)
+        
+        modified_count += 1
+    
+    print(f"Successfully inserted dummy keypoint at position {keypoint_position} in {modified_count} files")
+
 
 if __name__ == "__main__":
     # Example usage:
-    folder_path = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/images/val"
+    folder_path = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH/images/val"
 
     # 1) Rename images by adding a prefix
     # prefix = "Generic_"
     # rename_with_prefix(folder_path, prefix)
 
     # 2) List all images in a txt file
-    # output_txt = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/val.txt"
-    # base_path_for_list = "./images/val"
-    # list_images_in_txt(folder_path, output_txt, base_path_for_list)
+    output_txt = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH/val.txt"
+    base_path_for_list = "./images/val"
+    list_images_in_txt(folder_path, output_txt, base_path_for_list)
     
     # 3) Train/val split on manual_adjustment.py
     # root_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img"
@@ -329,4 +394,8 @@ if __name__ == "__main__":
 
     # DG_BOX_separate_files('/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_box_img/img/Generic')
     # box_clearobj('/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/train', class_threshold=6)
-    box_clearobj('/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/val', class_threshold=6)
+    # box_clearobj('/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/val', class_threshold=6)
+
+    # 5) Insert dummy keypoint at position 3 (which will be the 4th keypoint) 
+    # labels_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/train"
+    # insert_dummy_keypoint(labels_dir, keypoint_position=3)
