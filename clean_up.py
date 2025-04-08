@@ -306,8 +306,7 @@ def insert_dummy_keypoint(folder_path: str, keypoint_position: int) -> None:
     """
     Inserts a dummy keypoint (0, 0, 0) at the specified position in all YOLO annotation files in the folder.
     
-    This function helps make different keypoint annotation schemes compatible by adding a placeholder
-    keypoint at a specific position.
+    This function handles multiple instances of annotations per file (multiple objects per image).
     
     Parameters:
         folder_path (str): Directory containing YOLO annotation files (.txt)
@@ -317,12 +316,14 @@ def insert_dummy_keypoint(folder_path: str, keypoint_position: int) -> None:
     """
     # Loop over each file in the folder
     modified_count = 0
+    instances_modified = 0
     
     for filename in os.listdir(folder_path):
         if not filename.endswith(".txt"):
             continue
         
         file_path = os.path.join(folder_path, filename)
+        file_modified = False
         
         # Read all lines from the annotation file
         with open(file_path, "r") as f:
@@ -355,31 +356,107 @@ def insert_dummy_keypoint(folder_path: str, keypoint_position: int) -> None:
                 # Combine everything back into a line
                 modified_line = " ".join(bbox_parts + keypoint_parts) + "\n"
                 modified_lines.append(modified_line)
+                file_modified = True
+                instances_modified += 1
             else:
                 # If insertion point is beyond existing keypoints, leave as is
                 modified_lines.append(line)
         
         # Write the modified content back to the file
-        with open(file_path, "w") as f:
-            f.writelines(modified_lines)
-        
-        modified_count += 1
+        if file_modified:
+            with open(file_path, "w") as f:
+                f.writelines(modified_lines)
+            modified_count += 1
     
-    print(f"Successfully inserted dummy keypoint at position {keypoint_position} in {modified_count} files")
+    print(f"Successfully inserted dummy keypoint at position {keypoint_position} in {modified_count} files, modifying {instances_modified} annotation instances")
 
 
+def reorder_keypoints(folder_path: str, new_order: list[int]) -> None:
+    """
+    Reorders YOLO keypoints in all annotation files within `folder_path` according to `new_order`.
+    
+    This function handles multiple instances of annotations per file (multiple objects per image).
+    
+    Each entry in `new_order` indicates where the original keypoint index should be placed.
+    For example, if new_order = [0,1,3,2,4], 
+    it means the 0th keypoint remains 0, the 1st remains 1, 2 goes to position 3, 3 goes to position 2, etc.
+    
+    Parameters:
+        folder_path (str): Directory containing YOLO annotation files (.txt)
+        new_order (list[int]): Desired ordering of the keypoints (0-based indices)
+    """
+    modified_count = 0
+    instances_modified = 0
+    
+    for filename in os.listdir(folder_path):
+        if not filename.endswith(".txt"):
+            continue
+        
+        file_path = os.path.join(folder_path, filename)
+        file_modified = False
+        
+        # Read lines
+        with open(file_path, "r") as f:
+            lines = f.readlines()
+        
+        modified_lines = []
+        for line in lines:
+            parts = line.strip().split()
+            if len(parts) < 5:  # Skip invalid lines
+                modified_lines.append(line)
+                continue
+            
+            # First 5: class_id, x, y, w, h
+            bbox_parts = parts[:5]
+            keypoint_parts = parts[5:]
+            
+            # Group keypoint_parts into triplets
+            keypoints = [keypoint_parts[i:i+3] for i in range(0, len(keypoint_parts), 3)]
+            
+            # Check if we can apply the reordering
+            if len(keypoints) == len(new_order):
+                # Rearrange keypoints according to new_order
+                reordered = []
+                for idx in new_order:
+                    if 0 <= idx < len(keypoints):
+                        reordered.append(keypoints[idx])
+                    else:
+                        # If index is out of range, add a placeholder
+                        reordered.append(["0", "0", "0"])
+                
+                # Flatten it back to a list of strings
+                keypoint_parts = [val for triplet in reordered for val in triplet]
+                file_modified = True
+                instances_modified += 1
+            else:
+                # If the number of keypoints doesn't match new_order length,
+                # leave this instance as is
+                pass
+            
+            # Combine everything back into a line
+            modified_line = " ".join(bbox_parts + keypoint_parts) + "\n"
+            modified_lines.append(modified_line)
+        
+        # Write the reordered annotations back
+        if file_modified:
+            with open(file_path, "w") as f:
+                f.writelines(modified_lines)
+            modified_count += 1
+    
+    print(f"Successfully reordered keypoints in {modified_count} files, modifying {instances_modified} annotation instances using new_order={new_order}")
+    
 if __name__ == "__main__":
     # Example usage:
-    folder_path = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH/images/val"
+    # folder_path = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH/images/val"
 
     # 1) Rename images by adding a prefix
     # prefix = "Generic_"
     # rename_with_prefix(folder_path, prefix)
 
     # 2) List all images in a txt file
-    output_txt = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH/val.txt"
-    base_path_for_list = "./images/val"
-    list_images_in_txt(folder_path, output_txt, base_path_for_list)
+    # output_txt = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH/val.txt"
+    # base_path_for_list = "./images/val"
+    # list_images_in_txt(folder_path, output_txt, base_path_for_list)
     
     # 3) Train/val split on manual_adjustment.py
     # root_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img"
@@ -397,5 +474,10 @@ if __name__ == "__main__":
     # box_clearobj('/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/val', class_threshold=6)
 
     # 5) Insert dummy keypoint at position 3 (which will be the 4th keypoint) 
-    # labels_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/train"
-    # insert_dummy_keypoint(labels_dir, keypoint_position=3)
+    labels_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/train"
+    insert_dummy_keypoint(labels_dir, keypoint_position=3)
+    
+    # 6) Reorder keypoints
+    labels_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/train"
+    reorder_keypoints(labels_dir, new_order=[0,1,2,3,4,5,8,6,7,9,10,11])
+    
