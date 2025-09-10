@@ -28,6 +28,11 @@ def list_images_in_txt(
     """
     Creates/overwrites `output_txt_path` with a list of all image filenames in `folder_path`.
     Each line will be prefixed by `base_path_for_list` if provided.
+    Arguments:
+    - folder_path: Directory containing the images.
+    - output_txt_path: Path to the output text file where image names will be listed.
+    - base_path_for_list: Optional base path to prepend to each image filename in the list
+    (e.g., "./images/train"). If empty, only filenames will be listed.
     """
 
     valid_extensions = (".png", ".jpg", ".jpeg", ".bmp", ".gif")
@@ -445,21 +450,157 @@ def reorder_keypoints(folder_path: str, new_order: list[int]) -> None:
     
     print(f"Successfully reordered keypoints in {modified_count} files, modifying {instances_modified} annotation instances using new_order={new_order}")
     
+def detect_num_instances(folder_path: str, target_instance: int) -> None:
+    """
+    Detects the number of annotation instances in all YOLO annotation files in the folder.
+    
+    Parameters:
+        folder_path (str): Directory containing YOLO annotation files (.txt)
+    """
+    total_instance_errors = 0
+    error_file_list = []
+    
+    # Loop over each file in the folder
+    for filename in os.listdir(folder_path):
+        if not filename.endswith(".txt"):
+            continue
+        
+        file_path = os.path.join(folder_path, filename)
+        
+        # Read all lines from the label file
+        with open(file_path, "r") as f:
+            lines = f.readlines()
+        
+        # Count instances in this file
+        instance_count = len(lines)
+        if instance_count != target_instance:
+            print(f"Warning: {filename} has {instance_count} instances, expected {target_instance}")
+            error_file_list.append(filename)
+            
+        total_instance_errors += 1
+    
+    print(f"Total number of annotation files with erroneous instances: {total_instance_errors}")
+    print(f"List of files with instance errors: {error_file_list}")
+
+def set_keypoint_visibility(folder_path: str, keypoint_indices: list[int], new_visibility: int, output_dir: str | None = None, only_if_current_visibility_is: int | None = None) -> None:
+    """
+    Sets the visibility flag for specific keypoints in all YOLO annotation files in a folder.
+
+    This function handles multiple annotation instances per file.
+
+    Parameters:
+        folder_path (str): Directory containing YOLO annotation files (.txt).
+        keypoint_indices (list[int]): A list of 0-based indices of the keypoints to modify.
+                                      For example, [0, 2] would target the 1st and 3rd keypoints.
+        new_visibility (int): The new visibility value to set (e.g., 0, 1, or 2).
+        output_dir (str | None, optional): Directory to save modified files. 
+                                           If None, overwrites original files. Defaults to None.
+        only_if_current_visibility_is (int | None, optional): Only change the visibility if the current
+                                                              visibility flag matches this value. 
+                                                              If None, the change is unconditional. Defaults to None.
+    """
+    if not isinstance(keypoint_indices, list):
+        print("Error: keypoint_indices must be a list of integers.")
+        return
+    
+    # Determine output directory and create if necessary
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        print(f"Output will be saved to: {output_dir}")
+    else:
+        # If no output_dir is provided, the output path will be the same as the input path.
+        output_dir = folder_path
+        print("Output will overwrite original files.")
+
+    modified_files_count = 0
+    modified_instances_count = 0
+
+    for filename in os.listdir(folder_path):
+        if not filename.endswith(".txt"):
+            continue
+
+        file_path = os.path.join(folder_path, filename)
+        output_path = os.path.join(output_dir, filename)
+        file_was_modified = False
+        
+        with open(file_path, "r") as f:
+            lines = f.readlines()
+
+        new_lines = []
+        for line in lines:
+            parts = line.strip().split()
+            
+            # A valid line must have at least a class, a box, and one keypoint triplet
+            if len(parts) < 8:
+                new_lines.append(line)
+                continue
+
+            keypoint_parts = parts[5:]
+            num_keypoints = len(keypoint_parts) // 3
+            line_was_modified = False
+
+            for kp_index in keypoint_indices:
+                # Check if the target keypoint is within the range of available keypoints for this instance
+                if 0 <= kp_index < num_keypoints:
+                    # The visibility flag is the 3rd value in each triplet (x, y, v)
+                    # Its position in the flat list is (kp_index * 3) + 2
+                    visibility_part_index = kp_index * 3 + 2
+                    
+                    # Check current visibility if a filter is provided
+                    perform_update = False
+                    if only_if_current_visibility_is is None:
+                        perform_update = True
+                    else:
+                        try:
+                            current_visibility = int(float(keypoint_parts[visibility_part_index]))
+
+                            if current_visibility == only_if_current_visibility_is:
+                                perform_update = True
+                        except (ValueError, IndexError):
+                            # If current visibility is not a valid int or index is bad, skip
+                            print(f"Warning: Could not parse current visibility for keypoint {kp_index} in {filename}. Skipping.")
+                            continue
+
+                    if perform_update:
+                        # Update the visibility flag
+                        keypoint_parts[visibility_part_index] = str(new_visibility)
+                        line_was_modified = True
+                else:
+                    print(f"Warning: In '{filename}', keypoint index {kp_index} is out of range for an instance with {num_keypoints} keypoints. Skipping.")
+
+            if line_was_modified:
+                # Reconstruct the line and add it to our list of new lines
+                new_line = " ".join(parts[:5] + keypoint_parts) + "\n"
+                new_lines.append(new_line)
+                modified_instances_count += 1
+                file_was_modified = True
+            else:
+                # If this line wasn't modified, add it back as is
+                new_lines.append(line)
+
+        # If any line in the file was changed, write to the determined output path
+        if file_was_modified:
+            with open(output_path, "w") as f:
+                f.writelines(new_lines)
+            modified_files_count += 1
+            
+    print(f"Operation complete. Modified {modified_instances_count} annotation instances across {modified_files_count} files.")
+
 if __name__ == "__main__":
     # Example usage:
-    # folder_path = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH/images/val"
+    folder_path = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH_r2/images/val"
 
     # 1) Rename images by adding a prefix
-    # prefix = "Generic_"
+    # prefix = "tremorSUT_YW_v3_"
     # rename_with_prefix(folder_path, prefix)
 
     # 2) List all images in a txt file
-    # output_txt = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH/val.txt"
-    # base_path_for_list = "./images/val"
-    # list_images_in_txt(folder_path, output_txt, base_path_for_list)
+    output_txt = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH_r2/images/val.txt"
+    base_path_for_list = "./images/val"
+    list_images_in_txt(folder_path, output_txt, base_path_for_list)
     
     # 3) Train/val split on manual_adjustment.py
-    # root_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img"
+    # root_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Nat/TST_250820"
     # train_val_split(root_dir, val_ratio=0.2, seed=42)
 
     # 4) Fixing YOLO box annotation from manual_adjustment.py
@@ -473,11 +614,20 @@ if __name__ == "__main__":
     # box_clearobj('/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/train', class_threshold=6)
     # box_clearobj('/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/val', class_threshold=6)
 
-    # 5) Insert dummy keypoint at position 3 (which will be the 4th keypoint) 
-    labels_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/train"
-    insert_dummy_keypoint(labels_dir, keypoint_position=3)
+    # 5) Insert dummy keypoint at position 3 (which will be the 4th keypoint) # TODO: check system for 12 keypoints already existing case
+    # labels_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Nat/KH_Top_aggregated0624/labels/val/Kaist_BG_KH"
+    # insert_dummy_keypoint(labels_dir, keypoint_position=3)
     
-    # 6) Reorder keypoints
-    labels_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/AVATAR_img/labels/train"
-    reorder_keypoints(labels_dir, new_order=[0,1,2,3,4,5,8,6,7,9,10,11])
+    # # 6) Reorder keypoints
+    # labels_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Nat/KH_Top_aggregated0624/labels/val/Kaist_BG_KH"
+    # reorder_keypoints(labels_dir, new_order=[0,1,2,3,4,5,8,6,7,9,10,11])
     
+    #7) Detect number of annotation instances
+    # labels_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH/labels/avatar_labels/val"
+    # target_instance = 5
+    # detect_num_instances(labels_dir, target_instance)
+    
+    # #8) Set keypoint visibility
+    # labels_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH_r2/labels/train_tobefixed"
+    # output_dir = "/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Real_3D_AVATAR_KH_r2/labels/train_fixed"
+    # set_keypoint_visibility(labels_dir, keypoint_indices=[1, 2], new_visibility=0, only_if_current_visibility_is=1, output_dir=output_dir)

@@ -5,6 +5,46 @@ from PIL import Image
 import os
 import matplotlib.pyplot as plt
 
+def save_reversed_segmentation(result, output_path):
+    """
+    Save segmented image with reversed mask (background visible, object blacked out)
+    
+    Args:
+        result: YOLO segmentation result
+        output_path: Path to save the processed image
+    """
+    # Get the original image
+    original_img = result.orig_img.copy()
+    
+    # Create a mask for all detected objects
+    if result.masks is not None:
+        # Get image dimensions
+        h, w = original_img.shape[:2]
+        
+        # Initialize combined mask
+        combined_mask = np.zeros((h, w), dtype=np.uint8)
+        
+        # Combine all segmentation masks
+        for mask in result.masks.data:
+            # Resize mask to original image size
+            mask_resized = cv2.resize(mask.cpu().numpy(), (w, h))
+            # Convert to binary mask
+            binary_mask = (mask_resized > 0.5).astype(np.uint8)
+            # Add to combined mask
+            combined_mask = np.logical_or(combined_mask, binary_mask).astype(np.uint8)
+        
+        # Create the final image
+        result_img = original_img.copy()
+        
+        # Black out the segmented objects (where mask is 1)
+        result_img[combined_mask == 1] = [0, 0, 0]  # Set to black
+        
+        # Save the result
+        cv2.imwrite(output_path, result_img)
+        print(f"Reversed segmentation saved to: {output_path}")
+    else:
+        print("No segmentation masks found in the result")
+
 
 def calculate_circularity(segment):
     area = cv2.contourArea(segment)
@@ -43,10 +83,12 @@ def compare_histograms(hist1, hist2):
 ##### Initialization #####
 # Load Yolo model
 # model = ultralytics.YOLO('yolov9c-seg')
-model = ultralytics.FastSAM('FastSAM-s.pt')
+# model = ultralytics.FastSAM('FastSAM-s.pt')
+model = ultralytics.FastSAM('/home/tarislada/YOLOprojects/YOLO_custom/Models/Nat_segment.pt')
 
 # Video path
-video_path = 'YOLO_custom/preTST_CS1_M2.mp4'
+# video_path = 'YOLO_custom/preTST_CS1_M2.mp4'
+video_path = '/home/tarislada/YOLOprojects/YOLO_custom/preTST_CS1_M3.mp4'
 cap = cv2.VideoCapture(video_path)
 ret, frame = cap.read()
 if not ret:
@@ -77,6 +119,10 @@ for index, result in enumerate(results):
     
     frame = np.array(im)
     valid_mouse_segment_found = False
+    
+    if index == 0:
+        output_filename = f"reversed_segmentation.jpg"
+        save_reversed_segmentation(result, output_filename)
 
     if index == 0 or not mouse_selected:
         while not mouse_selected:

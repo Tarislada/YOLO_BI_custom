@@ -1,5 +1,6 @@
 import os
 import cv2
+import collections
 
 def extract_frames_from_video(
     video_path: str,
@@ -81,51 +82,95 @@ def extract_frames_from_directory(
             )
 
 
-def images_to_video(
-    input_dir: str,
-    output_video_path: str,
-    fps: int = 30
-):
+def images_to_video(input_dir: str,
+                    output_video_path: str,
+                    fps: int = 30,
+                    resize_mode: str = "resize"):  # or "pad"
     """
     Creates a video from a sequence of images in a directory.
-    
-    :param input_dir: Directory containing image frames.
-    :param output_video_path: Path to the output video file.
-    :param fps: Frames per second for the output video.
+    Ensures consistent frame size; auto-resizes/pads if needed.
     """
-    # Get list of image files
+    # Collect + natural sort so frame_2 comes before frame_10? actually after; natsort fixes numeric order.
     images = [f for f in os.listdir(input_dir) 
               if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-    
-    # Sort images by name so they go in the correct sequence
-    images.sort()
-    
+    # images = images.sort()
+
+    print(f"Found {len(images)} image files in {input_dir}")
     if not images:
-        print(f"No images found in directory: {input_dir}")
+        print("No images. Aborting.")
         return
-    
-    # Read the first image to determine frame size
-    first_image_path = os.path.join(input_dir, images[0])
-    frame = cv2.imread(first_image_path)
-    if frame is None:
-        print(f"Error: Could not read image {first_image_path}")
+
+    # Read first valid image
+    first_frame = None
+    for name in images:
+        path = os.path.join(input_dir, name)
+        im = cv2.imread(path, cv2.IMREAD_COLOR)  # force 3-channel
+        if im is not None:
+            first_frame = im
+            break
+    if first_frame is None:
+        print("Could not read any image.")
         return
-    
-    height, width, channels = frame.shape
-    
-    # Define the codec and create the VideoWriter
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # You can change codec as needed
-    out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
-    
-    # Write each image to the video
-    for img_name in images:
-        img_path = os.path.join(input_dir, img_name)
-        img_frame = cv2.imread(img_path)
-        if img_frame is not None:
-            out.write(img_frame)
-    
+
+    h, w = first_frame.shape[:2]
+    print(f"Base frame size: {w}x{h}")
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # or 'mp4v' if you want mp4
+    out = cv2.VideoWriter(output_video_path, fourcc, fps, (w, h))
+    if not out.isOpened():
+        print("Error: VideoWriter failed to initialize.")
+        return
+
+    written = 0
+    mismatched = 0
+
+    for name in images:
+        path = os.path.join(input_dir, name)
+        frame = cv2.imread(path, cv2.IMREAD_COLOR)  # ensures 3 channels
+        if frame is None:
+            print(f"Skipped unreadable image: {name}")
+            continue
+
+        fh, fw = frame.shape[:2]
+        if (fh, fw) != (h, w):
+            mismatched += 1
+            if resize_mode == "resize":
+                frame = cv2.resize(frame, (w, h), interpolation=cv2.INTER_AREA)
+            elif resize_mode == "pad":
+                canvas = cv2.copyMakeBorder(
+                    frame, 0, max(0, h - fh), 0, max(0, w - fw),
+                    cv2.BORDER_CONSTANT, value=(0, 0, 0)
+                )
+                frame = canvas[:h, :w]
+            else:
+                print(f"Frame {name} size mismatch ({fw}x{fh}); skipping.")
+                continue
+
+        out.write(frame)
+        written += 1
+
     out.release()
     print(f"Video saved to: {output_video_path}")
+    print(f"Frames written: {written}  (mismatched resized: {mismatched})")
+
+    
+def inspect_image_shapes(input_dir):
+    exts = ('.jpg', '.jpeg', '.png')
+    files = [f for f in os.listdir(input_dir) if f.lower().endswith(exts)]
+    files.sort()
+    shapes = collections.Counter()
+    bad = []
+    for f in files:
+        img = cv2.imread(os.path.join(input_dir, f))
+        if img is None:
+            bad.append(f)
+            continue
+        shapes[img.shape] += 1
+    print("Total image files:", len(files))
+    print("Unreadable:", len(bad))
+    for shp, cnt in shapes.items():
+        print(f"{cnt:4d}  -> shape={shp}")
+    return shapes, bad
 
 
 if __name__ == "__main__":
@@ -148,6 +193,10 @@ if __name__ == "__main__":
     
     # 2) Combine all images in 'some_image_dir' into a video
     # images_dir = '/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Walltask/represetative'
-    images_dir = '/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_binocular_set6/extracted_frames/m33_t2'
-    output_video = "/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_binocular_set6/representative.mp4"
-    images_to_video(images_dir, output_video, fps=30)
+    # images_dir = '/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_binocular_set6/extracted_frames/m33_t2'
+    # output_video = "/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_binocular_set6/representative.mp4"
+    images_dir = '/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/YOLO_format/Bot_IR_Hunting/KH_bot_IR_v4/images/val'
+    output_video = "/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_bot_IR_v4_val.mp4"
+
+    # inspect_image_shapes('/home/tarislada/YOLOprojects/YOLO_custom/Dataset/KH/YOLO_format/Bot_IR_Hunting/KH_bot_IR_v4/images/val')
+    images_to_video(images_dir, output_video, fps=30, resize_mode='resize')

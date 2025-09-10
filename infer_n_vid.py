@@ -111,6 +111,8 @@ class VideoProcessor:
                 # if result.keypoints.conf is not None: 
                 if result.keypoints is not None and result.keypoints.xyn.nelement() != 0: # Check if there are no keypoints detected TODO: Check if this is the correct way to check for keypoints
                     # Key points tensors
+                    
+                    torch.set_printoptions(precision=16)
                     keypoints_xy = result.keypoints.xyn.to(self.device)
                     keypoints_conf = result.keypoints.conf.unsqueeze(-1)  # Add a new axis to make it [1, 11, 1]
                     
@@ -120,6 +122,7 @@ class VideoProcessor:
                     tensors_to_concat.append(keypoints_conf.reshape(-1, num_keypoints))
                 elif result.boxes.xywh.nelement() != 0: #TODO: this line has been going in and out. check for working and not-working cases. working case: custom mouse keypoints detection-YN
                     # If no keypoints are detected, append a tensor of -1 to maintain the structure
+                    # TODO: here, hardcoding 33 is a problem. What to do?
                     tensors_to_concat.append(torch.full((boxes_xywh.shape[0], 33), -1, dtype=torch.float32, device=self.device))
                 else:    
                     tensors_to_concat.append(torch.full((1, 33), -1, dtype=torch.float32, device=self.device))
@@ -152,12 +155,14 @@ class VideoProcessor:
             # Perform prediction only once and store the results in an instance variable
             # Redirect standard output
             # sys.stdout = open(os.devnull, 'w')
-            # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=1, imgsz=1920, retina_masks=True) # for Custom videos
+            self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=1, imgsz=640, retina_masks=True) # for Custom videos
+            # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=1, imgsz=(390,1920), retina_masks=True) # for Custom videos
+            # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=1, imgsz=(480,720), retina_masks=True) # for Custom videos
             # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=1, imgsz=1920, augment=True, retina_masks=True) # for cricket detection
-            # self.results = self.model.track(self.video_path,  stream=True, device="cuda:0", persist=True, max_det=5,conf=0.2,retina_masks=True,imgsz=1024) # For AVATAR videos
+            # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, max_det=5,conf=0.2,retina_masks=True,imgsz=1500) # For AVATAR videos
             # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, iou=0.6, conf=0.2,retina_masks=True,imgsz=2048) # For AVATAR social
             # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, iou=0.6, conf=0.2,retina_masks=True,imgsz=1280) # For MONKEY videos
-            self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, imgsz=1920, retina_masks=True) # for AVATAR_Box
+            # self.results = self.model.track(self.video_path, stream=True, device="cuda:0", persist=True, imgsz=1920, retina_masks=True) # for AVATAR_Box
             # sys.stdout = sys.AVATAR_Box
             self.tensors_list = []
             for i, result in enumerate(self.results):
@@ -226,7 +231,7 @@ class VideoProcessor:
         try:
             if self.tensors_list:
                 final_tensor = torch.cat(self.tensors_list, dim=0)
-                np.savetxt(self.csv_file_path, final_tensor.cpu().numpy().reshape(-1, final_tensor.shape[-1]), fmt='%.4f', delimiter=',')
+                np.savetxt(self.csv_file_path, final_tensor.cpu().numpy().reshape(-1, final_tensor.shape[-1]), fmt='%16f', delimiter=',')
                 print(f"Successfully saved results to {self.csv_file_path}")
             else:
                 print("No tensors to save to CSV.")
@@ -307,12 +312,15 @@ if __name__ == "__main__":
     # model_path = 'YOLO_custom/Models/KH_binocular/KH_noseperfect_s_v1.pt'
     # model_path = 'YOLO_custom/Models/Real_3D_AVATAR/Med_v11__hhres_bot_addv02_01.pt'
     # model_path = 'YOLO_custom/Models/Real_3D_AVATAR/Med_v11__hhres_bot_addv02_all1.pt'
-    # model_path = 'YOLO_custom/Models/KH_bot_ir/KH_bot_sv3_7.pt'
+    # model_path = '/home/tarislada/YOLOprojects/YOLO_custom/Models/KH_bot_ir/KH_bot_sv3_7.pt'
     # model_path = 'runs/detect/train16/weights/best.pt'
     # model_path = 'Models/Cricket_detection/Cricket_v2s.pt'
-    model_path = '/home/tarislada/YOLOprojects/YOLO_custom/Models/AVATAR_Box_m_v2_inter/weights/best.pt'
+    # model_path = '/home/tarislada/YOLOprojects/YOLO_custom/Models/AVATAR_pose_m/weights/best.pt' # previous version
+    # model_path = '/home/tarislada/YOLOprojects/YOLO_custom/Models/AVATAR_pose/train4/weights/best.pt' # new version 250601
     # model_path = '/home/tarislada/YOLOprojects/YOLO_custom/Models/AVATAR_Box_m/weights/best.pt'
     # model_path = 'YOLO_custom/Models/Monkey_data/train23/weights/best.pt'
+    # model_path = '/home/tarislada/YOLOprojects/YOLO_custom/Models/YW/Tremor_12sv03/weights/best.pt'
+    model_path = '/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Nat/Nat_train6/weights/best.pt'
     # fps = 60.0
     fps = 30.0
     # Single file level usage
@@ -327,7 +335,11 @@ if __name__ == "__main__":
     # video_path = '/home/tarislada/Documents/Extra_python_projects/SKH FP/video_file/m17_t1.mp4'
     # video_path = '/mnt/disk3/Cricket_hunt/raw/m20_t2.MP4'
     # video_path = '/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_binocular_set6/representative.mp4'
-    video_path = '/home/tarislada/YOLOprojects/YOLO_custom/411.mp4'
+    # video_path = '/home/tarislada/YOLOprojects/YOLO_custom/#10-05292024145559-0000.avi'
+    # video_path = '/home/tarislada/YOLOprojects/YOLO_custom/411.mp4'
+    # video_path = '/home/tarislada/YOLOprojects/YOLO_custom/Video_YW/#12_6OHDAWUXI_DV36_L_VT1_01.mpg'
+    # video_path = '/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_bot_IR_v4_val.mp4'
+    video_path = '/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Nat/Trial_1.mpg'
     
     # image_folder = 'YOLO_custom/KH/KH_binocular_set5/images/m24_2_t7_KH_NoseNtail_sv1_2b' # Provide a path if you want to keep the frame images
     
@@ -344,14 +356,20 @@ if __name__ == "__main__":
     # output_video_name = 'YOLO_custom/Result_vid/m24_2_t7_KH_NoseNtail_sv1_2b.mp4'
     # output_video_name = 'YOLO_custom/Result_vid/m17_t1_KH_NoseNtail_sv1_2b.mp4'
     # output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/KH_set6_m33_t2_crickettest_v11s04.mp4'
-    output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/411.mp4'
+    # output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/411_pose2.mp4'
+    # output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/10-05292024145559-0000_KH_bot_sv3_7.mp4'
+    # output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/Result_vid/#12_6OHDAWUXI_DV36_L_VT1_01.mp4'
+    # output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_bot_IR_v4_val_YOLO.mp4'
+    output_video_name = '/home/tarislada/YOLOprojects/YOLO_custom/Dataset/Nat/Trial_1_output.mp4'
     
     # csv_file_path = '/home/tarislada/YOLOprojects/YOLO_custom/csv/MVI_0624_KH_bot_sv3_1b_original.csv'  # Provide a path if you want to save results to CSV
     # csv_file_path = '/home/tarislada/Documents/Extra_python_projects/SKH FP/m18_t7_v3_raw.csv'
     # csv_file_path = 'YOLO_custom/Hannah_sample/Results/FM3_7d_session1_output.csv''
     # csv_file_path = 'YOLO_custom/KH/KH_binocular_set5/m24_2_t7_KH_NoseNtail_sv1_2b.csv'
+    # csv_file_path = '/home/tarislada/YOLOprojects/YOLO_custom/csv/#12_6OHDAWUXI_DV36_L_VT1_01.csv'
+    # csv_file_path = '/home/tarislada/YOLOprojects/YOLO_custom/KH/KH_bot_IR_v4_val_YOLO4.csv'
        
-    # processor = VideoProcessor(model_path=model_path, video_path=video_path, output_video_name=output_video_name, fps=fps, csv_file_path=csv_file_path)
+    # processor = VideoProcessor(model_path=model_path, video_path=video_path, fps=fps, csv_file_path=csv_file_path)
     processor = VideoProcessor(model_path=model_path, video_path=video_path, output_video_name=output_video_name, fps=fps)
     processor.process_video()
     # processor = VideoProcessor(model_path=model_path, video_path=video_path, image_folder=image_folder, fps=fps, csv_file_path=csv_file_path)
